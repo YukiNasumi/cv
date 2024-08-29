@@ -1,0 +1,7 @@
+*pt
+data/
+data_train/
+data_test/
+__pycache__
+clip0/
+clip1/
