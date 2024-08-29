@@ -5,3 +5,6 @@ data_test/
 __pycache__
 clip0/
 clip1/
+*rar
+*zip
+*pkl
