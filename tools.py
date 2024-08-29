@@ -10,9 +10,7 @@ import random
 import shutil
 import torchvision
 from torch.utils.data import Dataset,DataLoader
-example_path = 'tyt.jpg'
-example_image = Image.open(example_path)
-def show_tensor(image, plot=False):
+def show_tensor(image, plot=True):
     '''把image对象或tensor对象变成图片'''
     if isinstance(image, torch.Tensor) or isinstance(image,np.ndarray): #or isinstance(image,PIL.JpegImagePlugin.JpegImageFile):
         im = image
@@ -25,10 +23,10 @@ def show_tensor(image, plot=False):
             plt.axis('off')
             plt.show()
             return
-        plt.imshow(im)
+        plt.imshow(im)#imshow要求channel后置
         plt.axis('off')
         plt.show()
-    else:
+    else:#是通过PIL.Image.open(path)打开的图像,自动即为channel后置
         if plot == True:
             trans1 = transforms.ToTensor()
             trans2 = transforms.ToPILImage()
@@ -92,13 +90,23 @@ def compute_optical_flow(img1, img2):
 
     return bgr_flow
 
-def video_processer(video_path, save_path,label,limit=1000,init_index=1):
+def video_processer(video_path,save_path,label,limit=None,init_index=1,num_frame_scale=5):
+    """_summary_
+    在save_path下生成三个目录（如果没有就自动创建）：image,label,optical_flow。
+    分别用来存放图片，标签，和光流处理后的图像
+    Args:
+        video_path (_str_): 
+        save_path (_str_): 
+        label (_int_): 
+        limit (int, optional): 限制生成多少副光流图，默认None不限制 
+        init_index (int, optional): 图像的编号，光流图会比原图少1
+        num_frame_scale:图像编号长度
+    """
     num_frame_scale = 5
     cap = cv2.VideoCapture(video_path)
     # get first video frame
     if not cap.isOpened():
-        print("Error: Could not open video.")
-        exit()
+        raise FileNotFoundError("Error: Could not open video.")
     i = init_index
     last_frame=None
     if not (os.path.exists(save_path) and os.path.isdir(save_path)):
@@ -109,8 +117,8 @@ def video_processer(video_path, save_path,label,limit=1000,init_index=1):
     while True:
         ok, frame = cap.read()
         if not ok:
-            print('video is over')
-            return
+            print('video is over,the last index is {}'.format(i))
+            return i #返回最后一个编号
         l = len(str(i))
         assert l<=num_frame_scale#最多五位数的图片
         prefix = '0'*(num_frame_scale-l)
@@ -130,24 +138,38 @@ def video_processer(video_path, save_path,label,limit=1000,init_index=1):
         if (not limit==None) and i-1 == limit:
             print('reach the image limit')
             exit()
+        
     
-def gen_dataloader(source_path1,source_path2,scale=1000,batch_size=10,shuffle=True,data_train = 'data_train',data_test = 'data_test',use_exist_folder=False):
-    '''在两个源路径里采集图片生成dataloader,使用前准备好data_train data_test'''
-    if not use_exist_folder:
-        if os.path.exists(data_train) or os.path.exists(data_test):
-            print('already exist folder,to use existing folder,set use_exist_folder True')
-            exit()
-        os.mkdir(data_train)
-        os.mkdir(data_test)
-    if os.path.exists(data_train) and os.path.exists(data_test):
-        pass
-    else:
-        print('not such a folder')
-        exit()
+def gen_dataloader(source_path1,source_path2,scale=1000,data_path='.',batch_size=10,shuffle=True,data_train = '__train',data_test = '__test'):
+    """_summary_
+    在两个source_path下的optical_flow路径下分别随机采集数量为scale的图像
+    在根目录下创建data目录，依托data产生训练集和测试集以及相应的dataloader
+    Args:
+        source_path1 (_type_): _description_
+        source_path2 (_type_): _description_
+        scale (int, optional): _description_. Defaults to 1000.
+        data_path:存放数据的目录
+        batch_size (int, optional): _description_. Defaults to 10.
+        shuffle (bool, optional): _description_. Defaults to True.
+        data_train (str, optional): _description_. Defaults to '__train'.
+        data_test (str, optional): _description_. Defaults to '__test'.
+    """
+    #首先组织目录
+    if not os.path.exists(data_path):
+        os.mkdir(data_path)
+    data_train = os.path.join(data_path,data_train)
+    data_test = os.path.join(data_path,data_test)
+    os.mkdir(data_train)
+    os.mkdir(data_test)
+
+    #检查源路径是否合法
     target1 = os.path.join(source_path1,'optical_flow')
     target2 = os.path.join(source_path2,'optical_flow')
+    if not (os.path.exists(target1) and os.path.exists(target2)):
+        raise FileNotFoundError('illegal input dir')
+    
     #选择scale规模的数据放入data_train中
-    train_data_file_names=[]#记录放入训练集的文件
+    train_data_file_names=[]#记录放入训练集的文件，后面防止将这些文件又放入测试集
     for i,dir in enumerate((target1,target2)):
         all_file = os.listdir(dir)
         train_data_file_name = random.sample(all_file,scale)
@@ -159,6 +181,7 @@ def gen_dataloader(source_path1,source_path2,scale=1000,batch_size=10,shuffle=Tr
                 shutil.copy(full_file_name,os.path.join(data_train,str(i)))
     dataset_train = torchvision.datasets.ImageFolder(root=data_train,transform=train_data_process)
     train_loader = DataLoader(dataset_train,batch_size=batch_size,shuffle=shuffle, num_workers=4)
+    
     #接下来构建测试集
     for i,(dir,train_names) in enumerate(zip((target1,target2),train_data_file_names)):
         all_file = [d for d in os.listdir(dir) if not d in train_names]
@@ -170,4 +193,44 @@ def gen_dataloader(source_path1,source_path2,scale=1000,batch_size=10,shuffle=Tr
                 shutil.copy(full_file_name,os.path.join(data_test,str(i)))
     dataset_test = torchvision.datasets.ImageFolder(root=data_test,transform=train_data_process)
     test_loader = DataLoader(dataset_test,batch_size=batch_size,shuffle=shuffle, num_workers=4)
-    return train_loader,test_loader
+    return (dataset_train,train_loader),(dataset_test,test_loader)
+
+class data_pro:
+    def __init__(self):
+        self.last_idx=1
+        pass
+    
+    def video_process(self,video_path,save_path,label,limit=None,init_index=None,num_frame_scale=5):
+        """_summary_
+
+        Args:
+            video_path (_type_): _description_
+            save_path (_type_): _description_
+            label (_type_): _description_
+            limit (_type_, optional): _description_. Defaults to None.
+            init_index (_type_, optional): _description_. 默认自动从上一次生成的开始编号，如果切换save_path则需要手动设置编号，以防覆盖
+            num_frame_scale (int, optional): _description_. Defaults to 5.
+        """
+        if not init_index:
+            init_index = self.last_idx+1
+        self.last_idx=video_processer(video_path,save_path,label,limit=None,init_index=init_index,num_frame_scale=5)
+    
+    def data_generate(self,source_path1,source_path2,scale=1000,data_path='.',batch_size=10,shuffle=True,data_train = '__train',data_test = '__test'):
+        """_summary_
+    在两个source_path下的optical_flow路径下分别随机采集数量为scale的图像
+    在根目录下创建data目录，依托data产生训练集和测试集以及相应的dataloader
+    Args:
+        source_path1 (_type_): _description_
+        source_path2 (_type_): _description_
+        scale (int, optional): _description_. Defaults to 1000.
+        data_path:存放数据的目录
+        batch_size (int, optional): _description_. Defaults to 10.
+        shuffle (bool, optional): _description_. Defaults to True.
+        data_train (str, optional): _description_. Defaults to 'data_train'.
+        data_test (str, optional): _description_. Defaults to 'data_test'.
+    """
+        (train,test)=gen_dataloader(source_path1,source_path2,scale=1000,data_path='.',batch_size=10,shuffle=True,data_train = '__train',data_test = '__test')
+        self.dataset_train,self.train_loader = train
+        self.dataset_test,self.test_loader = test
+        self.classes = self.dataset_test.classes
+        self.class2idx = self.dataset_test.class_to_idx

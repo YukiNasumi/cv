@@ -1,10 +1,15 @@
 *pt
+#数据文件不跟踪
 data/
 data_train/
 data_test/
 __pycache__
 clip0/
 clip1/
+#大文件不跟踪
 *rar
 *zip
 *pkl
+#测试文件不跟踪
+t.py
+t.ipynb
