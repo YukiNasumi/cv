@@ -145,8 +145,8 @@ def gen_dataloader(source_path1,source_path2,scale=1000,data_path='.',batch_size
     在两个source_path下的optical_flow路径下分别随机采集数量为scale的图像
     在根目录下创建data目录，依托data产生训练集和测试集以及相应的dataloader
     Args:
-        source_path1 (_type_): _description_
-        source_path2 (_type_): _description_
+        source_path1 (_type_): 直接输入有图片的目录
+        source_path2 (_type_): 同path1
         scale (int, optional): _description_. Defaults to 1000.
         data_path:存放数据的目录
         batch_size (int, optional): _description_. Defaults to 10.
@@ -163,8 +163,8 @@ def gen_dataloader(source_path1,source_path2,scale=1000,data_path='.',batch_size
     os.mkdir(data_test)
 
     #检查源路径是否合法
-    target1 = os.path.join(source_path1,'optical_flow')
-    target2 = os.path.join(source_path2,'optical_flow')
+    target1 = source_path1
+    target2 = source_path2
     if not (os.path.exists(target1) and os.path.exists(target2)):
         raise FileNotFoundError('illegal input dir')
     
