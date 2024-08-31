@@ -98,11 +98,11 @@ def video_processer(video_path,save_path,label,limit=None,init_index=1,num_frame
         video_path (_str_): 
         save_path (_str_): 
         label (_int_): 
-        limit (int, optional): 限制生成多少副光流图，默认None不限制 
+        limit (int, optional): 限制生成多少副原图，默认None不限制 
         init_index (int, optional): 图像的编号，光流图会比原图少1
         num_frame_scale:图像编号长度
     """
-    num_frame_scale = 5
+    prefix = lambda i:'0'*(num_frame_scale-len(str(i)))+str(i)
     cap = cv2.VideoCapture(video_path)
     # get first video frame
     if not cap.isOpened():
@@ -110,20 +110,19 @@ def video_processer(video_path,save_path,label,limit=None,init_index=1,num_frame
     i = init_index
     last_frame=None
     if not (os.path.exists(save_path) and os.path.isdir(save_path)):
-        os.mkdir(save_path)
+        os.makedirs(save_path)
     for dir in ('image','label','optical_flow'):
         if not os.path.exists(os.path.join(save_path,dir)):
             os.mkdir(os.path.join(save_path,dir))
     while True:
         ok, frame = cap.read()
         if not ok:
-            print('video is over,the last index is {}'.format(i))
-            return i #返回最后一个编号
+            print('video is over,the last index is {}'.format(i-1))
+            return i-1 #返回最后一个编号
         l = len(str(i))
         assert l<=num_frame_scale#最多五位数的图片
-        prefix = '0'*(num_frame_scale-l)
-        cv2.imwrite(save_path+'/image/'+prefix+str(i)+'.jpg',frame)
-        with open(save_path+'/label/'+prefix+str(i)+'.txt','w') as f:
+        cv2.imwrite(save_path+'/image/'+prefix(i)+'.jpg',frame)
+        with open(save_path+'/label/'+prefix(i)+'.txt','w') as f:
             f.write(str(label))
             
         if i==init_index:
@@ -131,7 +130,7 @@ def video_processer(video_path,save_path,label,limit=None,init_index=1,num_frame
             i = i+1
             continue
         
-        cv2.imwrite(save_path+'/optical_flow/'+prefix+str(i-1)+'.jpg',compute_optical_flow(frame,last_frame))
+        cv2.imwrite(save_path+'/optical_flow/'+prefix(i-1)+'.jpg',compute_optical_flow(frame,last_frame))
         i = i+1
         if i%100 ==0:
             print(f'img{i} processing')
@@ -196,8 +195,8 @@ def gen_dataloader(source_path1,source_path2,scale=1000,data_path='.',batch_size
     return (dataset_train,train_loader),(dataset_test,test_loader)
 
 class data_pro:
-    def __init__(self):
-        self.last_idx=1
+    def __init__(self,last_idx=0):
+        self.last_idx=last_idx#原图最新一张的索引,默认为0，则从1开始计数
         pass
     
     def video_process(self,video_path,save_path,label,limit=None,init_index=None,num_frame_scale=5):
