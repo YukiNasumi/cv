@@ -9,6 +9,7 @@ import os
 import random
 import shutil
 import torchvision
+import copy
 from torch.utils.data import Dataset,DataLoader
 def show_tensor(image, plot=True):
     '''把image对象或tensor对象变成图片'''
@@ -233,3 +234,60 @@ class data_pro:
         self.dataset_test,self.test_loader = test
         self.classes = self.dataset_test.classes
         self.class2idx = self.dataset_test.class_to_idx
+
+def model_modify(amodel,class_num):
+    """_summary_
+        将模型的最后一层改变为要求的分类数
+
+    Args:
+        amodel (_type_): _description_
+        class_num (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    model = copy.deepcopy(amodel)
+    model.fc = torch.nn.Linear(model.fc.in_features, class_num)
+    return model
+    
+def get_loader(src,batch_size,transform=train_data_process):
+    dataset_test = torchvision.datasets.ImageFolder(root=src,transform=transform)
+    return DataLoader(dataset_test,batch_size=batch_size,shuffle=True, num_workers=4)
+
+def move_sample(src,dst,n_sample=None):
+    """把src中数量为sample的放入dst中
+
+    Args:
+        src (_type_): _description_
+        dst (_type_): _description_
+        n_sample (_type_): _description_
+    """
+    all_name = os.listdir(src)
+    if not n_sample:
+        selected = all_name
+    else :
+        selected = random.sample(all_name,n_sample)
+    for n in selected:
+        full_name = os.path.join(src,n)
+        shutil.copy(full_name,dst)
+        
+        
+def sample_assgin(src,dst1,dst2,rate):
+    """_summary_
+
+    Args:
+        src (_type_): _description_
+        dst1 (_type_): _description_
+        dst2 (_type_): _description_
+        rate (_type_): _description_
+    """
+    assert rate<=1 and rate>=0
+    all_file = os.listdir(src)
+    random.shuffle(all_file)
+    l = len(all_file)
+    for i in range(int(l*rate)):
+        full_name = os.path.join(src,all_file[i])
+        shutil.copy(full_name,dst1)
+    for i in range(int(l*rate),l):
+        full_name = os.path.join(src,all_file[i])
+        shutil.copy(full_name,dst2)
