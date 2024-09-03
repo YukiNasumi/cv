@@ -8,6 +8,7 @@ from matplotlib_inline import backend_inline
 #backend_inline.set_matplotlib_formats('svg')
 import argparse
 from torchvision.models import ResNet18_Weights
+import yaml
 
 
 def train_model(epoch,model,device,trainloader,optimizer,creterion,save_path):
@@ -59,17 +60,11 @@ if __name__ == '__main__':
     parser.add_argument('--train_path',type=str,required=False)
     parser.add_argument('--test_path',type=str,required=False)
     parser.add_argument('--model_path',type=str,required=False)
-    parser.add_argument('--test',type=bool,required=False,default=False)
-    parser.add_argument('--train',type=bool,required=False,default=False)
-    parser.add_argument('--epoch',type=int,required=False,default=1)
+    parser.add_argument('--epochs',type=int,required=False,default=1)
+    parser.add_argument('--config',type=str,required=False)
     
-    args = parser.parse_args()
-    test = args.test
-    train = args.train
+    args,unknown = parser.parse_known_args()
     
-
-
-
 
     from torchvision.models import resnet18
     model = tools.model_modify(resnet18(weights=ResNet18_Weights.DEFAULT),2)
@@ -77,24 +72,34 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(args.model_path))
 
 #hyper params
-
-    epochs = args.epoch
+    epochs = args.epochs
     learning_rate = 0.0005
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    creterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss()
     batch_size = 10
     save_path = args.save_path
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-    if train and args.train_path:
+    if args.train_path:
+        if  args.config:
+            config = yaml.safe_load(args.config)
+            epochs = config.get('epochs')
+            learning_rate = config.get('learning_rate')
+            optimizer = config.get('optimizer')
+            if 'adam' in optimizer.slower():
+                optimizer=torch.optim.Adam(model.parameters(),lr=learning_rate)
+            if 'cross' in criterion.slower():
+                criterion = nn.CrossEntropyLoss()
+            batch_size = config.get('batch_size')
+        
         trainloader = tools.get_loader(args.train_path,batch_size)
-        train_model(epochs,model,device,trainloader,optimizer,creterion,save_path)
+        train_model(epochs,model,device,trainloader,optimizer,criterion,save_path)
     
         if save_path:
             torch.save(model.state_dict(), save_path)
         
-    if test and args.test_path:
+    if args.test_path:
         print('test on {}'.format(args.test_path))
         testloader = tools.get_loader(args.test_path,batch_size)
         test_model(model,testloader,device)
