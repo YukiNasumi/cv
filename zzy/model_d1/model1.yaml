@@ -1,0 +1,15 @@
+epochs : 2
+learning_rate : 0.0005
+optimizer : torch.optim.Adam
+creterion : nn.CrossEntropyLoss()
+batch_size : 10
+
+performance:
+  data1/test:
+    accuracy: 78.47533632286996%
+    precision: 100.0%
+    recall: 56.8%
+    F1-score: 0.7244897959183673
+  data2/test:
+  data3/test:
+  data4/test:
