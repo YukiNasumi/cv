@@ -82,30 +82,31 @@ if __name__ == '__main__':
                 config = yaml.safe_load(f)
             lr = config.get('lr')
             epochs = config.get('epochs')
-            optimizer = config.get('optimizer')
-            criterion = config.get('criterion')
+            optimizer_name = config.get('optimizer')
+            criterion_name = config.get('criterion')
             device = config.get('device')
             if not device:
                 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-            if 'adam' in optimizer.slower():
+            if 'adam' in optimizer_name.lower():
                 optimizer=torch.optim.Adam(model.parameters(),lr)
             else:
                 print("请检查配置文件的optimizer")
                 exit
-            if 'cross' in criterion.slower():
+            if 'cross' in criterion_name.lower():
                 criterion = nn.CrossEntropyLoss()
             else:
                 print('请检查配置文件的criterion')
                 exit
             batch_size = config.get('batch_size')
+            trainloader = tools.get_loader(train_path,batch_size)
+            train_model(epochs,model,device,trainloader,optimizer,criterion,save_path)
+
+            if save_path:
+                torch.save(model.state_dict(), save_path)
         else:
             print("请输入配置文件")
             exit
-        trainloader = tools.get_loader(train_path,batch_size)
-        train_model(epochs,model,device,trainloader,optimizer,criterion,save_path)
-
-        if save_path:
-            torch.save(model.state_dict(), save_path)
+        
         
     if args.test_path:
         print('test on {}'.format(test_path))
