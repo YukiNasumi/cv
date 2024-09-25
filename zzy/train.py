@@ -10,7 +10,7 @@ from torchvision.models import ResNet18_Weights
 import yaml
 
 
-def train_model(epoch,model,device,trainloader,optimizer,creterion,save_path):
+def train_model(epoch,model,device,trainloader,optimizer,creterion):
     model = model.to(device)
     for epoch in range(epoch):
         print('epoch {}:'.format(epoch+1))
@@ -25,9 +25,7 @@ def train_model(epoch,model,device,trainloader,optimizer,creterion,save_path):
             if (i+1)%100==0:
                 print(f'batch:{i+1}, loss:{loss.item()}')
         
-    torch.save(model.state_dict(),save_path)
-    #ax.plot(list(range(1,i+1+1)),losses)
-    #plt.savefig('epoch{}'.format(epoch))
+
     
 def test_model(model,loader,device):
     model.eval()
@@ -99,7 +97,7 @@ if __name__ == '__main__':
                 exit
             batch_size = config.get('batch_size')
             trainloader = tools.get_loader(train_path,batch_size)
-            train_model(epochs,model,device,trainloader,optimizer,criterion,save_path)
+            train_model(epochs,model,device,trainloader,optimizer,criterion)
 
             if save_path:
                 torch.save(model.state_dict(), save_path)
@@ -108,7 +106,7 @@ if __name__ == '__main__':
             exit
         
         
-    if args.test_path:
+    if test_path:
         print('test on {}'.format(test_path))
         testloader = tools.get_loader(test_path,batch_size)
         test_model(model,testloader,device)
