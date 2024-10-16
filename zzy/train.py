@@ -107,6 +107,8 @@ if __name__ == '__main__':
         
         
     if test_path:
+        if args.model_path:
+            model.load_state_dict(torch.load(args.model_path))
         print('test on {}'.format(test_path))
         testloader = tools.get_loader(test_path,batch_size)
         test_model(model,testloader,device)
