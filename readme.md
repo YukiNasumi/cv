@@ -3,17 +3,22 @@
 ### 训练
 **一定要添加的参数： 训练路径，配置文件**
 1. 训练路径
+
 路径下有 `c` 和 `nc`两个文件夹，分别存放演唱会和非演唱会的图片
 2. 配置文件
+
 包含`lr epochs optimizer criterion`的配置文件
 举例：`PS E:\mypython\own\cv\zzy> python train.py --train_path E:\mypython\own\optical_flow\data1\train --config t.yaml`
 3.其他参数
+
 --save_path 保存模型的路径，以.pth为扩展名
 --model_path 导入模型的路径，.pth为扩展名，一般是之前保存的模型，默认导入resnet18的参数
 ### 测试
 **只需要输入--test_path参数就可以了**
 ### 一个综合的例子
-`PS E:\mypython\own\cv\zzy> python train.py --model_path example.pth --train_path E:\mypython\own\optical_flow\data1\train --config example.yaml --save_path example.pth --test_path E:\mypython\own\optical_flow\data1\test`
+```powershell
+PS E:\mypython\own\cv\zzy> python train.py --model_path example.pth --train_path E:\mypython\own\optical_flow\data1\train --config example.yaml --save_path example.pth --test_path E:\mypython\own\optical_flow\data1\test
+```
 解释：从训练example.pth的参数，并将结果覆盖到example.pth上
 ## 9.2(2)
 上传了训练日志，修改训练代码，增加训练脚本
